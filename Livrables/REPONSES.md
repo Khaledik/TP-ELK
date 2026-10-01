@@ -511,4 +511,19 @@ Les trois navigateurs les plus utilisés sont :
 
 # Partie 5 - Dashboard
 
-À compléter après réalisation du tableau de bord Kibana et de la restitution.
+Un tableau de bord Kibana nommé `Site de recrutement - trafic`
+a été créé.
+
+Il contient :
+
+- le nombre total de requêtes : 20 700 ;
+- le taux d'erreur serveur : 1,97 % ;
+- le trafic dans le temps, réparti par code HTTP ;
+- les 10 offres les plus consultées ;
+- les 5 navigateurs les plus utilisés ;
+- une carte des offres basée sur le champ `localisation`.
+
+L'interactivité a également été testée.
+
+Un clic sur une barre correspondant au code HTTP 503 applique
+un filtre au tableau de bord et met à jour les autres visualisations.
