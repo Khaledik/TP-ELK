@@ -1,0 +1,162 @@
+# TP2 - Partie 4 : enquête Kibana
+# Requêtes ES|QL et Dev Tools utilisées pendant l'enquête.
+
+
+# 4.1 - Répartition par code HTTP
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY http.response.status_code
+| SORT requetes DESC
+
+
+# 4.1 - Répartition par méthode HTTP
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY http.request.method
+| SORT requetes DESC
+
+
+# 4.1 - Volume par jour
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY jour = BUCKET(@timestamp, 1 day)
+| SORT jour ASC
+
+
+# 4.1 - Moyenne par jour
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY jour = BUCKET(@timestamp, 1 day)
+| STATS moyenne_par_jour = AVG(requetes)
+
+
+# 4.2 - Erreurs serveur par heure
+FROM logs-web-default
+| WHERE http.response.status_code >= 500
+| STATS erreurs = COUNT(*) BY heure = BUCKET(@timestamp, 1 hour)
+| SORT erreurs DESC
+| LIMIT 10
+
+
+# 4.2 - Erreurs serveur par tranches de 5 minutes
+FROM logs-web-default
+| WHERE http.response.status_code >= 500
+| STATS erreurs = COUNT(*) BY creneau = BUCKET(@timestamp, 5 minutes)
+| SORT erreurs DESC
+| LIMIT 15
+
+
+# 4.2 - URLs touchées pendant l'incident
+# 14h heure locale (+02:00) correspond à 12h UTC.
+FROM logs-web-default
+| WHERE http.response.status_code >= 500
+  AND @timestamp >= TO_DATETIME("2026-09-28T12:00:00Z")
+  AND @timestamp < TO_DATETIME("2026-09-28T13:00:00Z")
+| STATS erreurs = COUNT(*) BY url.original
+| SORT erreurs DESC
+
+
+# 4.2 - Volume de l'API autour de l'incident
+FROM logs-web-default
+| WHERE url.original LIKE "/api/offres*"
+  AND @timestamp >= TO_DATETIME("2026-09-28T11:30:00Z")
+  AND @timestamp < TO_DATETIME("2026-09-28T13:15:00Z")
+| STATS requetes = COUNT(*) BY creneau = BUCKET(@timestamp, 5 minutes)
+| SORT creneau ASC
+
+
+# 4.3 - IP à l'origine des 404
+FROM logs-web-default
+| WHERE http.response.status_code == 404
+| STATS erreurs = COUNT(*) BY source.address
+| SORT erreurs DESC
+| LIMIT 10
+
+
+# 4.3 - Début, fin et nombre de requêtes du robot
+FROM logs-web-default
+| WHERE http.response.status_code == 404
+  AND source.address == "203.0.113.66"
+| STATS debut = MIN(@timestamp),
+        fin = MAX(@timestamp),
+        erreurs = COUNT(*)
+
+
+# 4.3 - Activité du robot minute par minute
+FROM logs-web-default
+| WHERE http.response.status_code == 404
+  AND source.address == "203.0.113.66"
+| STATS erreurs = COUNT(*) BY minute = BUCKET(@timestamp, 1 minute)
+| SORT minute ASC
+
+
+# 4.3 - URLs demandées par le robot
+FROM logs-web-default
+| WHERE http.response.status_code == 404
+  AND source.address == "203.0.113.66"
+| STATS tentatives = COUNT(*) BY url.original
+| SORT tentatives DESC
+
+
+# 4.3 - User-agent de l'IP suspecte
+FROM logs-web-default
+| WHERE source.address == "203.0.113.66"
+| STATS requetes = COUNT(*) BY user_agent.original
+| SORT requetes DESC
+
+
+# 4.3 - Autres 404
+FROM logs-web-default
+| WHERE http.response.status_code == 404
+  AND source.address != "203.0.113.66"
+| STATS erreurs = COUNT(*) BY url.original
+| SORT erreurs DESC
+| LIMIT 20
+
+
+# 4.4 - Top 10 des offres les plus consultées
+FROM logs-web-default
+| WHERE http.request.method == "GET"
+  AND http.response.status_code == 200
+  AND labels.offre_id IS NOT NULL
+| STATS consultations = COUNT(*) BY labels.offre_id
+| SORT consultations DESC
+| LIMIT 10
+
+
+# 4.4 - Récupération des informations métier dans l'index offres
+GET offres/_search
+{
+  "_source": [
+    "id",
+    "titre",
+    "ville",
+    "contrat"
+  ],
+  "query": {
+    "ids": {
+      "values": [
+        "OFF-04662",
+        "OFF-01153",
+        "OFF-03141",
+        "OFF-02899",
+        "OFF-01275",
+        "OFF-01660",
+        "OFF-03923",
+        "OFF-00901",
+        "OFF-03145",
+        "OFF-03524"
+      ]
+    }
+  },
+  "size": 10
+}
+
+
+# 4.5 - Systèmes d'exploitation
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY user_agent.os.name
+| SORT requetes DESC
+
+
+# 4.5 - Top 3 navigateurs
+FROM logs-web-default
+| STATS requetes = COUNT(*) BY user_agent.name
+| SORT requetes DESC
+| LIMIT 3

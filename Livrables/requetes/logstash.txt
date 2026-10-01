@@ -1,0 +1,60 @@
+# TP2 - Mise en place Logstash
+# IMPORTANT : aucun vrai mot de passe n'est stocké dans ce fichier.
+
+# Vérification de l'index du TP1
+GET offres/_count
+
+
+# Rôle limité pour Logstash
+POST _security/role/logstash_writer
+{
+  "cluster": ["monitor", "manage_index_templates"],
+  "indices": [
+    {
+      "names": ["offres", "logs-web-*"],
+      "privileges": ["write", "create", "create_index", "auto_configure"]
+    }
+  ]
+}
+
+
+# Utilisateur Logstash
+# Le vrai mot de passe est uniquement dans .env :
+# LOGSTASH_INTERNAL_PASSWORD=...
+POST _security/user/logstash_internal
+{
+  "password": "<LOGSTASH_INTERNAL_PASSWORD>",
+  "roles": ["logstash_writer"],
+  "full_name": "Logstash - ingestion"
+}
+
+
+# Vérifications utilisées pendant le TP
+GET offres/_doc/OFF-00002
+GET offres/_count
+
+GET _data_stream/logs-web-default
+GET logs-web-default/_count
+
+GET logs-web-default/_count
+{
+  "query": {
+    "term": {
+      "tags": "_grokparsefailure"
+    }
+  }
+}
+
+GET logs-web-default/_search
+{
+  "size": 1,
+  "sort": [
+    {
+      "@timestamp": "asc"
+    }
+  ]
+}
+
+GET logs-web-default/_mapping/field/http.response.status_code
+
+GET logs-web-default/_settings?filter_path=*.settings.index.mode
