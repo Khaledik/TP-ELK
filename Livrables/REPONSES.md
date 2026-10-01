@@ -1,8 +1,5 @@
 # REPONSES - TP2 Logstash et analyse de logs
 
-> État du document : exercices 0 à 4.5 terminés.  
-> La partie 5 (dashboard et restitution) reste à faire.
-
 ## Mise en place
 
 ### Pourquoi ne pas utiliser le compte `elastic` pour Logstash ?
